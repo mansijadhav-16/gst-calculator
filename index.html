@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GST Calculator – Mansi Jadhav</title>
+  <meta name="description" content="A modern, feature-rich GST Calculator built by Mansi Jadhav. Calculate GST, CGST, SGST instantly." />
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    :root {
+      --bg:        #0a0f1e;
+      --card:      rgba(255,255,255,0.06);
+      --card-b:    rgba(255,255,255,0.10);
+      --border:    rgba(255,255,255,0.09);
+      --border-h:  rgba(255,255,255,0.16);
+      --text:      #f1f5f9;
+      --muted:     #94a3b8;
+      --dim:       #475569;
+      --blue:      #3b82f6;
+      --violet:    #8b5cf6;
+      --indigo:    #6366f1;
+      --emerald:   #10b981;
+      --amber:     #f59e0b;
+      --sky:       #0ea5e9;
+      --rose:      #f43f5e;
+    }
+
+    html { font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 16px; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    /* ── Animated Background ── */
+    .bg-orbs { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+    .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(90px); opacity: 0.13;
+      animation: floatOrb 10s ease-in-out infinite;
+    }
+    .orb-1 { width: 650px; height: 650px; background: radial-gradient(circle, #3b82f6, transparent); top: -200px; left: -180px; animation-duration: 9s; }
+    .orb-2 { width: 550px; height: 550px; background: radial-gradient(circle, #8b5cf6, transparent); bottom: -200px; right: -180px; animation-duration: 11s; animation-direction: reverse; }
+    .orb-3 { width: 350px; height: 350px; background: radial-gradient(circle, #10b981, transparent); top: 40%; left: 55%; animation-duration: 13s; }
+    @keyframes floatOrb {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50%       { transform: translateY(-22px) scale(1.04); }
+    }
+
+    /* Grid */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+
+    /* ── Layout ── */
+    .wrapper { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 0 16px 40px; }
+
+    /* ── Header ── */
+    header { text-align: center; padding: 40px 0 20px; width: 100%; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 999px; padding: 6px 16px; margin-bottom: 18px;
+      font-size: 0.75rem; color: var(--muted); font-weight: 500;
+    }
+    .badge-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.6; transform:scale(1.3); } }
+
+    h1 {
+      font-size: clamp(2.4rem, 7vw, 4.5rem);
+      font-weight: 900; line-height: 1.08;
+      background: linear-gradient(135deg, #fff 0%, #a78bfa 55%, #60a5fa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle { color: var(--muted); margin-top: 10px; font-size: 0.95rem; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card-b);
+      backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+      border: 1px solid var(--border-h);
+      border-radius: 28px;
+      padding: 32px 28px;
+      width: 100%; max-width: 500px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.45);
+      animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity:0; transform:translateY(28px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* ── Labels ── */
+    .field-label {
+      display: block; font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--muted); margin-bottom: 8px;
+    }
+
+    /* ── Amount Input ── */
+    .amount-wrap { position: relative; margin-bottom: 22px; }
+    .amount-prefix {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      font-size: 1.4rem; font-weight: 700; color: var(--dim);
+    }
+    #amount-input {
+      width: 100%; background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border); border-radius: 18px;
+      padding: 18px 16px 18px 44px;
+      font-size: 1.8rem; font-weight: 800; color: var(--text);
+      font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+    }
+    #amount-input::-webkit-outer-spin-button,
+    #amount-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #amount-input::placeholder { color: #1e293b; }
+    #amount-input:focus {
+      outline: none; border-color: var(--indigo);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.22);
+    }
+
+    /* ── Mode Buttons ── */
+    .mode-row { display: flex; gap: 10px; margin-bottom: 22px; }
+    .mode-btn {
+      flex: 1; padding: 13px 10px; border-radius: 14px;
+      border: 1.5px solid var(--border); background: var(--card);
+      color: var(--muted); font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+    .mode-btn:hover { border-color: rgba(99,102,241,0.45); color: var(--text); }
+    .mode-btn.active {
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      border-color: transparent; color: #fff;
+      box-shadow: 0 6px 24px rgba(99,102,241,0.35);
+    }
+
+    /* ── Rate Buttons ── */
+    .rate-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .rate-btn {
+      flex: 1; padding: 12px 4px; border-radius: 13px;
+      border: 1.5px solid var(--border); background: var(--card);
+      color: var(--muted); font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    }
+    .rate-btn:hover { transform: translateY(-2px); border-color: rgba(99,102,241,0.4); color: var(--text); }
+    .rate-btn.active {
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-color: transparent; color: #fff;
+      box-shadow: 0 0 22px rgba(99,102,241,0.42);
+      transform: translateY(-1px);
+    }
+
+    /* ── Custom Rate Row ── */
+    .custom-row { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+
+    /* Toggle */
+    .toggle-wrap { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; flex-shrink: 0; }
+    .toggle-track {
+      position: relative; width: 46px; height: 25px;
+      border-radius: 999px; background: rgba(255,255,255,0.1);
+      transition: background 0.3s; flex-shrink: 0;
+    }
+    .toggle-track.on { background: var(--indigo); }
+    .toggle-thumb {
+      position: absolute; top: 4px; left: 4px;
+      width: 17px; height: 17px; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .toggle-track.on .toggle-thumb { transform: translateX(21px); }
+    .toggle-label { font-size: 0.82rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+
+    /* Custom input */
+    .custom-input-wrap { position: relative; flex: 1; }
+    #custom-rate {
+      width: 100%; background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 10px 32px 10px 14px;
+      font-size: 0.9rem; font-weight: 700; color: var(--text);
+      font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+    }
+    #custom-rate::-webkit-outer-spin-button,
+    #custom-rate::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    #custom-rate::placeholder { color: #1e293b; }
+    #custom-rate:focus { outline: none; border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+    #custom-rate.active-border { border-color: rgba(99,102,241,0.5); }
+    .pct-suffix { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; font-weight: 700; color: var(--dim); }
+
+    /* Active rate badge */
+    .rate-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.28);
+      border-radius: 999px; padding: 4px 12px;
+      font-size: 0.72rem; font-weight: 700; color: #a5b4fc;
+      margin: 12px 0 20px;
+    }
+    .rate-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #818cf8; }
+
+    /* ── Results ── */
+    #results { display: none; }
+    #results.visible { display: block; animation: fadeIn 0.35s ease both; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .result-card {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 18px; padding: 14px 16px;
+      transition: transform 0.25s, border-color 0.25s;
+    }
+    .result-card:hover { transform: translateY(-3px); border-color: rgba(99,102,241,0.35); }
+    .result-card.full { grid-column: 1 / -1; background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.28); }
+    .result-card.full:hover { border-color: rgba(99,102,241,0.5); }
+    .rc-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .rc-icon { font-size: 1rem; }
+    .rc-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+    .rc-value { font-size: 1.25rem; font-weight: 800; }
+    .rc-value.white  { color: var(--text); }
+    .rc-value.amber  { color: var(--amber); }
+    .rc-value.sky    { color: var(--sky); }
+    .rc-value.violet { color: #a78bfa; }
+    .rc-value.gradient {
+      font-size: 1.55rem;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa, #34d399);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .summary-line { text-align: center; font-size: 0.72rem; color: var(--dim); margin-top: 10px; }
+
+    /* ── Empty state ── */
+    #empty-state {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px; padding: 36px 20px; text-align: center;
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 10px; animation: bounce 2s ease-in-out infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .empty-text { color: var(--muted); font-size: 0.88rem; }
+
+    /* ── Reset button ── */
+    #reset-btn {
+      display: none; width: 100%; margin-top: 14px;
+      padding: 12px; border-radius: 14px;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--dim); font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.2s;
+    }
+    #reset-btn:hover { border-color: rgba(244,63,94,0.4); color: var(--rose); background: rgba(244,63,94,0.05); }
+    #reset-btn.visible { display: block; }
+
+    /* ── Info cards ── */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; width: 100%; max-width: 500px; }
+    .info-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 18px; padding: 14px 16px;
+      transition: border-color 0.2s;
+    }
+    .info-card:hover { border-color: var(--border-h); }
+    .info-title { font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; }
+    .info-desc  { font-size: 0.72rem; color: var(--dim); }
+    .c-emerald { color: #34d399; }
+    .c-sky     { color: var(--sky); }
+    .c-indigo  { color: #818cf8; }
+    .c-rose    { color: var(--rose); }
+
+    /* ── Footer ── */
+    footer { margin-top: 20px; width: 100%; max-width: 500px; }
+    .footer-card {
+      background: var(--card-b); border: 1px solid var(--border-h);
+      border-radius: 22px; padding: 22px 24px;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      text-align: center;
+    }
+    .creator-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 18px; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 900; color: #fff;
+      box-shadow: 0 4px 18px rgba(99,102,241,0.4);
+      flex-shrink: 0;
+    }
+    .creator-info { text-align: left; }
+    .creator-name { font-size: 0.9rem; font-weight: 800; color: var(--text); }
+    .creator-email { font-size: 0.75rem; color: #818cf8; text-decoration: none; }
+    .creator-email:hover { color: #a5b4fc; }
+    .divider { height: 1px; background: var(--border); margin-bottom: 16px; }
+    .hero-btn {
+      display: block; width: 100%; padding: 14px;
+      border-radius: 14px; border: none;
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #ec4899 100%);
+      background-size: 200% 200%;
+      animation: gradShift 3s ease infinite;
+      color: #fff; font-size: 0.9rem; font-weight: 900;
+      letter-spacing: 0.03em; text-decoration: none;
+      cursor: pointer; text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .hero-btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 10px 30px rgba(245,158,11,0.4); }
+    @keyframes gradShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .copy { font-size: 0.7rem; color: var(--dim); margin-top: 10px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .card { padding: 22px 18px; }
+      .rate-btn { font-size: 0.78rem; padding: 10px 2px; }
+      .rc-value { font-size: 1.05rem; }
+      .rc-value.gradient { font-size: 1.3rem; }
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+  <!-- Background -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="bg-grid"></div>
+
+  <div class="wrapper">
+
+    <!-- Header -->
+    <header>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        GST Calculator &mdash; India
+      </div>
+      <h1>GST Calculator</h1>
+      <p class="subtitle">Instant GST breakdown &middot; CGST &middot; SGST &middot; All rates</p>
+    </header>
+
+    <!-- Main Card -->
+    <div class="card">
+
+      <!-- Amount -->
+      <label class="field-label" for="amount-input">Enter Amount (₹)</label>
+      <div class="amount-wrap">
+        <span class="amount-prefix">₹</span>
+        <input id="amount-input" type="number" min="0" step="0.01" placeholder="0.00" autocomplete="off" />
+      </div>
+
+      <!-- Mode -->
+      <div class="mode-row">
+        <button class="mode-btn active" id="btn-add" onclick="setMode('add')">➕ Add GST</button>
+        <button class="mode-btn"        id="btn-remove" onclick="setMode('remove')">➖ Remove GST</button>
+      </div>
+
+      <!-- Rate -->
+      <label class="field-label">GST Rate</label>
+      <div class="rate-row">
+        <button class="rate-btn" id="r5"  onclick="setRate(5)">5%</button>
+        <button class="rate-btn" id="r12" onclick="setRate(12)">12%</button>
+        <button class="rate-btn active" id="r18" onclick="setRate(18)">18%</button>
+        <button class="rate-btn" id="r28" onclick="setRate(28)">28%</button>
+      </div>
+
+      <!-- Custom Rate -->
+      <div class="custom-row">
+        <div class="toggle-wrap" onclick="toggleCustom()">
+          <div class="toggle-track" id="custom-track">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="toggle-label">Custom Rate</span>
+        </div>
+        <div class="custom-input-wrap">
+          <input id="custom-rate" type="number" min="0" max="100" step="0.1" placeholder="e.g. 3" />
+          <span class="pct-suffix">%</span>
+        </div>
+      </div>
+
+      <!-- Active badge -->
+      <div class="rate-badge">
+        <span class="rate-badge-dot"></span>
+        <span id="active-rate-text">Active rate: 18%</span>
+      </div>
+
+      <!-- Empty state -->
+      <div id="empty-state">
+        <div class="empty-icon">🧮</div>
+        <p class="empty-text">Enter an amount above to see the GST breakdown</p>
+      </div>
+
+      <!-- Results -->
+      <div id="results">
+        <div class="result-grid">
+          <div class="result-card">
+            <div class="rc-head"><span class="rc-icon">💰</span><span class="rc-label">Original Amount</span></div>
+            <div class="rc-value white" id="r-original">₹0.00</div>
+          </div>
+          <div class="result-card">
+            <div class="rc-head"><span class="rc-icon">📊</span><span class="rc-label">GST Amount</span></div>
+            <div class="rc-value amber" id="r-gst">₹0.00</div>
+          </div>
+          <div class="result-card">
+            <div class="rc-head"><span class="rc-icon">🏛️</span><span class="rc-label" id="l-cgst">CGST (9%)</span></div>
+            <div class="rc-value sky" id="r-cgst">₹0.00</div>
+          </div>
+          <div class="result-card">
+            <div class="rc-head"><span class="rc-icon">🏢</span><span class="rc-label" id="l-sgst">SGST (9%)</span></div>
+            <div class="rc-value violet" id="r-sgst">₹0.00</div>
+          </div>
+          <div class="result-card full">
+            <div class="rc-head"><span class="rc-icon">✅</span><span class="rc-label">Final Amount</span></div>
+            <div class="rc-value gradient" id="r-final">₹0.00</div>
+          </div>
+        </div>
+        <p class="summary-line" id="summary-line"></p>
+      </div>
+
+      <!-- Reset -->
+      <button id="reset-btn" onclick="resetCalc()">🔄 Reset Calculator</button>
+
+    </div><!-- /card -->
+
+    <!-- Info cards -->
+    <div class="info-grid">
+      <div class="info-card"><div class="info-title c-emerald">5% GST</div><div class="info-desc">Essential goods, food items</div></div>
+      <div class="info-card"><div class="info-title c-sky">12% GST</div><div class="info-desc">Processed foods, computers</div></div>
+      <div class="info-card"><div class="info-title c-indigo">18% GST</div><div class="info-desc">General goods &amp; services</div></div>
+      <div class="info-card"><div class="info-title c-rose">28% GST</div><div class="info-desc">Luxury goods, automobiles</div></div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-card">
+        <div class="creator-row">
+          <div class="avatar">M</div>
+          <div class="creator-info">
+            <div class="creator-name">Mansi Jadhav</div>
+            <a class="creator-email" href="mailto:mansijadhav0216@gmail.com">mansijadhav0216@gmail.com</a>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <a class="hero-btn" id="digital-heroes-btn" href="https://digitalheroesco.com" target="_blank" rel="noopener noreferrer">
+          ⚡ Built for Digital Heroes
+        </a>
+        <p class="copy">© 2026 · Mansi Jadhav · All rights reserved</p>
+      </div>
+    </footer>
+
+  </div><!-- /wrapper -->
+
+  <script>
+    /* ── State ── */
+    let mode       = 'add';
+    let gstRate    = 18;
+    let useCustom  = false;
+
+    /* ── Format currency ── */
+    const fmt = (n) =>
+      new Intl.NumberFormat('en-IN', {
+        style: 'currency', currency: 'INR',
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      }).format(isNaN(n) || n < 0 ? 0 : n);
+
+    /* ── Set mode ── */
+    function setMode(m) {
+      mode = m;
+      document.getElementById('btn-add').classList.toggle('active', m === 'add');
+      document.getElementById('btn-remove').classList.toggle('active', m === 'remove');
+      calculate();
+    }
+
+    /* ── Set preset rate ── */
+    function setRate(r) {
+      gstRate   = r;
+      useCustom = false;
+      document.getElementById('custom-track').classList.remove('on');
+      document.getElementById('custom-rate').classList.remove('active-border');
+      document.getElementById('custom-rate').value = '';
+      [5, 12, 18, 28].forEach(v => document.getElementById('r' + v).classList.toggle('active', v === r));
+      updateBadge();
+      calculate();
+    }
+
+    /* ── Toggle custom ── */
+    function toggleCustom() {
+      useCustom = !useCustom;
+      document.getElementById('custom-track').classList.toggle('on', useCustom);
+      document.getElementById('custom-rate').classList.toggle('active-border', useCustom);
+      if (useCustom) {
+        [5,12,18,28].forEach(v => document.getElementById('r'+v).classList.remove('active'));
+        document.getElementById('custom-rate').focus();
+      } else {
+        setRate(gstRate); // restore last preset
+      }
+    }
+
+    /* ── Effective rate ── */
+    function effectiveRate() {
+      if (useCustom) {
+        const v = parseFloat(document.getElementById('custom-rate').value);
+        return isNaN(v) || v < 0 ? 0 : v > 100 ? 100 : v;
+      }
+      return gstRate;
+    }
+
+    /* ── Update badge ── */
+    function updateBadge() {
+      const r = effectiveRate();
+      const label = useCustom ? r + '% (Custom)' : r + '%';
+      document.getElementById('active-rate-text').textContent = 'Active rate: ' + label;
+    }
+
+    /* ── Calculate ── */
+    function calculate() {
+      const base = parseFloat(document.getElementById('amount-input').value);
+      const rate = effectiveRate();
+      updateBadge();
+
+      const empty   = document.getElementById('empty-state');
+      const results = document.getElementById('results');
+      const resetBtn = document.getElementById('reset-btn');
+
+      if (isNaN(base) || base <= 0) {
+        empty.style.display   = 'block';
+        results.classList.remove('visible');
+        resetBtn.classList.remove('visible');
+        return;
+      }
+
+      let original, gstAmt, final;
+      if (mode === 'add') {
+        original = base;
+        gstAmt   = (base * rate) / 100;
+        final    = base + gstAmt;
+      } else {
+        original = (base * 100) / (100 + rate);
+        gstAmt   = base - original;
+        final    = base;
+      }
+
+      const half = rate / 2;
+      document.getElementById('l-cgst').textContent = 'CGST (' + half + '%)';
+      document.getElementById('l-sgst').textContent = 'SGST (' + half + '%)';
+      document.getElementById('r-original').textContent = fmt(original);
+      document.getElementById('r-gst').textContent      = fmt(gstAmt);
+      document.getElementById('r-cgst').textContent     = fmt(gstAmt / 2);
+      document.getElementById('r-sgst').textContent     = fmt(gstAmt / 2);
+      document.getElementById('r-final').textContent    = fmt(final);
+
+      document.getElementById('summary-line').textContent = mode === 'add'
+        ? '₹' + base.toFixed(2) + ' + ' + rate + '% GST = ' + fmt(final)
+        : '₹' + base.toFixed(2) + ' (inclusive) → Original: ' + fmt(original);
+
+      empty.style.display = 'none';
+      results.classList.add('visible');
+      resetBtn.classList.add('visible');
+    }
+
+    /* ── Reset ── */
+    function resetCalc() {
+      document.getElementById('amount-input').value = '';
+      document.getElementById('custom-rate').value  = '';
+      useCustom = false;
+      document.getElementById('custom-track').classList.remove('on');
+      document.getElementById('custom-rate').classList.remove('active-border');
+      document.getElementById('results').classList.remove('visible');
+      document.getElementById('empty-state').style.display = 'block';
+      document.getElementById('reset-btn').classList.remove('visible');
+      document.getElementById('amount-input').focus();
+    }
+
+    /* ── Custom rate input listener ── */
+    document.getElementById('custom-rate').addEventListener('input', function() {
+      useCustom = true;
+      document.getElementById('custom-track').classList.add('on');
+      this.classList.add('active-border');
+      [5,12,18,28].forEach(v => document.getElementById('r'+v).classList.remove('active'));
+      calculate();
+    });
+
+    document.getElementById('custom-rate').addEventListener('focus', function() {
+      useCustom = true;
+      document.getElementById('custom-track').classList.add('on');
+      this.classList.add('active-border');
+      [5,12,18,28].forEach(v => document.getElementById('r'+v).classList.remove('active'));
+    });
+
+    /* ── Amount input listener ── */
+    document.getElementById('amount-input').addEventListener('input', calculate);
+
+    /* ── Init ── */
+    document.getElementById('amount-input').focus();
+  </script>
+
+</body>
+</html>
